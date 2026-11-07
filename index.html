@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f6fed">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="背单词">
+<meta name="mobile-web-app-capable" content="yes">
+<title>背单词</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #1c1e21;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --accent: #2f6fed;
+    --accent-soft: #eef3ff;
+    --ok: #12924f;
+    --ok-soft: #e8f7ee;
+    --bad: #d9373f;
+    --bad-soft: #fdecec;
+    --warn: #b4690e;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111315;
+      --card: #1b1e21;
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+      --line: #2c3136;
+      --accent: #6b9bff;
+      --accent-soft: #1b2740;
+      --ok: #4ade80;
+      --ok-soft: #14291d;
+      --bad: #ff7b72;
+      --bad-soft: #2a1517;
+      --warn: #f0b429;
+    }
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .app { max-width: 560px; margin: 0 auto; padding: 0 14px 90px; }
+
+  /* ---------- 顶部 ---------- */
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg);
+    padding: calc(10px + env(safe-area-inset-top)) 0 8px;
+  }
+  .title-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  h1 { font-size: 20px; margin: 0; font-weight: 700; letter-spacing: .3px; }
+  .subtitle { font-size: 13px; color: var(--muted); }
+
+  .tabs {
+    display: flex; gap: 6px;
+    background: var(--card);
+    padding: 5px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+  }
+  .tabs button {
+    flex: 1; padding: 9px 4px;
+    border: 0; border-radius: 9px;
+    background: transparent; color: var(--muted);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+  }
+  .tabs button.active { background: var(--accent); color: #fff; }
+  .tabs button .badge {
+    display: inline-block; min-width: 18px;
+    padding: 0 5px; margin-left: 4px;
+    border-radius: 9px; font-size: 11px;
+    background: rgba(255,255,255,.25);
+  }
+  .tabs button:not(.active) .badge { background: var(--bad); color: #fff; }
+
+  /* ---------- 通用 ---------- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 12px;
+  }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .spread { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .hidden { display: none !important; }
+
+  button.btn {
+    appearance: none; border: 1px solid var(--line);
+    background: var(--card); color: var(--text);
+    padding: 12px 16px; border-radius: 11px;
+    font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: transform .06s, background .15s;
+  }
+  button.btn:active { transform: scale(.98); }
+  button.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.btn.ghost { background: transparent; }
+  button.btn.small { padding: 7px 11px; font-size: 13px; border-radius: 9px; }
+  button.btn.danger { color: var(--bad); border-color: var(--bad); }
+  button.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ---------- 单元选择 ---------- */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 8px 13px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--card);
+    font-size: 14px; cursor: pointer; user-select: none;
+    transition: all .15s;
+  }
+  .chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .chip .n { opacity: .55; font-size: 12px; margin-left: 5px; font-weight: 500; }
+
+  /* ---------- 答题区 ---------- */
+  .quiz-word {
+    font-size: clamp(30px, 9vw, 46px);
+    font-weight: 700; letter-spacing: .5px;
+    text-align: center;
+    margin: 18px 0 6px;
+    word-break: break-word;
+  }
+  .quiz-hint { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .quiz-hint .unit-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-size: 12px;
+  }
+
+  input[type="text"], textarea {
+    width: 100%; padding: 14px;
+    font-size: 17px;   /* >=16px 防止 iOS 自动放大 */
+    border: 1.5px solid var(--line); border-radius: 11px;
+    background: var(--bg); color: var(--text);
+    outline: none; font-family: inherit;
+  }
+  input[type="text"]:focus, textarea:focus { border-color: var(--accent); }
+  textarea { min-height: 140px; resize: vertical; font-size: 15px; }
+
+  .feedback {
+    margin-top: 12px; padding: 13px 14px;
+    border-radius: 11px; font-size: 15px;
+  }
+  .feedback.ok { background: var(--ok-soft); color: var(--ok); border: 1px solid transparent; }
+  .feedback.bad { background: var(--bad-soft); color: var(--bad); }
+  .feedback .answer { display: block; margin-top: 6px; color: var(--text); font-size: 15px; }
+  .feedback .answer b { color: var(--ok); }
+
+  .progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .progress > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s; }
+
+  .stats-row { display: flex; gap: 10px; margin-top: 10px; }
+  .stat {
+    flex: 1; background: var(--bg); border-radius: 10px;
+    padding: 10px; text-align: center;
+  }
+  .stat .v { font-size: 19px; font-weight: 700; }
+  .stat .k { font-size: 12px; color: var(--muted); }
+
+  /* ---------- 错题本 ---------- */
+  .wrong-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--line);
+  }
+  .wrong-item:last-child { border-bottom: 0; }
+  .wrong-main { flex: 1; min-width: 0; }
+  .wrong-en { font-size: 17px; font-weight: 700; }
+  .wrong-zh { font-size: 14px; color: var(--muted); word-break: break-word; }
+  .wrong-count {
+    flex: none; text-align: center; min-width: 54px;
+    background: var(--bad-soft); color: var(--bad);
+    border-radius: 10px; padding: 6px 8px;
+  }
+  .wrong-count .n { font-size: 18px; font-weight: 700; line-height: 1.1; }
+  .wrong-count .t { font-size: 11px; }
+
+  .empty {
+    text-align: center; color: var(--muted);
+    padding: 36px 16px; font-size: 14px;
+  }
+  .empty .big { font-size: 34px; display: block; margin-bottom: 10px; }
+
+  /* ---------- 底部固定操作 ---------- */
+  .dock {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 9;
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  }
+  .dock-inner { max-width: 560px; margin: 0 auto; display: flex; gap: 10px; }
+  .dock button { flex: 1; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%);
+    background: rgba(0,0,0,.82); color: #fff;
+    padding: 10px 16px; border-radius: 10px; font-size: 14px;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+    z-index: 50; max-width: 88vw; text-align: center;
+  }
+  .toast.show { opacity: 1; }
+
+  ul.tips { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  ul.tips li { margin: 4px 0; }
+  code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="title-row">
+      <h1>背单词</h1>
+      <span class="subtitle" id="headerSub"></span>
+    </div>
+    <div class="tabs" role="tablist">
+      <button id="tabQuiz" class="active" role="tab">背单词</button>
+      <button id="tabWrong" role="tab">错题本<span class="badge hidden" id="wrongBadge">0</span></button>
+      <button id="tabLib" role="tab">词库</button>
+    </div>
+  </header>
+
+  <!-- ================= 背单词 ================= -->
+  <section id="viewQuiz">
+    <div class="card" id="setupCard">
+      <div class="spread" style="margin-bottom:10px">
+        <strong style="font-size:15px">选择单元</strong>
+        <div class="row">
+          <button class="btn small ghost" id="btnSelectAll">全选</button>
+          <button class="btn small ghost" id="btnSelectNone">清空</button>
+        </div>
+      </div>
+      <div class="chips" id="unitChips"></div>
+
+      <div class="spread" style="margin-top:16px">
+        <strong style="font-size:15px">练习模式</strong>
+      </div>
+      <div class="chips" id="modeChips">
+        <div class="chip on" data-mode="all">全部单词</div>
+        <div class="chip" data-mode="wrong">只练错题</div>
+      </div>
+
+      <div class="stats-row" style="margin-top:16px">
+        <div class="stat"><div class="v" id="statTotal">0</div><div class="k">本次题目</div></div>
+        <div class="stat"><div class="v" id="statDone">0</div><div class="k">已作答</div></div>
+        <div class="stat"><div class="v" id="statAcc">—</div><div class="k">正确率</div></div>
+      </div>
+
+      <button class="btn primary" id="btnStart" style="width:100%;margin-top:16px">开始背诵</button>
+    </div>
+
+    <div class="card hidden" id="quizCard">
+      <div class="spread" style="margin-bottom:12px">
+        <span class="muted" id="quizProgress">0 / 0</span>
+        <button class="btn small ghost" id="btnQuit">结束本轮</button>
+      </div>
+      <div class="progress"><i id="progressBar"></i></div>
+
+      <div class="quiz-word" id="quizWord">—</div>
+      <div class="quiz-hint" id="quizHint"></div>
+
+      <input type="text" id="answerInput" placeholder="输入中文释义"
+             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" id="btnSubmit" style="flex:2">提交</button>
+        <button class="btn ghost" id="btnSkip" style="flex:1">不会</button>
+      </div>
+
+      <div class="feedback hidden" id="feedback"></div>
+
+      <div class="row hidden" id="nextRow" style="margin-top:10px">
+        <button class="btn ghost" id="btnMarkRight" style="flex:1">其实我会</button>
+        <button class="btn primary" id="btnNext" style="flex:2">下一题</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 错题本 ================= -->
+  <section id="viewWrong" class="hidden">
+    <div class="card">
+      <div class="spread">
+        <strong style="font-size:15px">错题统计</strong>
+        <button class="btn small ghost" id="btnPracticeWrong">只练错题</button>
+      </div>
+      <div class="muted" style="margin-top:6px" id="wrongSummary">—</div>
+      <div id="wrongList" style="margin-top:8px"></div>
+    </div>
+  </section>
+
+  <!-- ================= 词库 ================= -->
+  <section id="viewLib" class="hidden">
+    <div class="card">
+      <div class="spread">
+        <strong style="font-size:15px">当前词库</strong>
+        <button class="btn small ghost" id="btnExport">导出</button>
+      </div>
+      <div class="muted" id="libSummary" style="margin-top:6px">—</div>
+    </div>
+
+    <div class="card">
+      <strong style="font-size:15px">导入词库</strong>
+      <p class="muted" style="margin:6px 0 8px">
+        每行一个单词，用 <code>|</code> 或制表符分隔：<br>
+        <code>abandon | 放弃；抛弃 | Unit 1</code><br>
+        第三列（单元）可以省略，默认归入「未分组」。
+      </p>
+      <textarea id="importText" placeholder="粘贴词表，或用下面的按钮选择文件"></textarea>
+      <input type="file" id="importFile" accept=".txt,.csv,text/plain" class="hidden">
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="btnPickFile" style="flex:1">选择文件</button>
+        <button class="btn primary" id="btnImport" style="flex:1">导入</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <strong style="font-size:15px">数据管理</strong>
+      <div class="row" style="margin-top:10px">
+        <button class="btn danger" id="btnResetStats" style="flex:1">清零所有错误次数</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn danger" id="btnRestoreDemo" style="flex:1">恢复示例词库</button>
+      </div>
+      <ul class="tips">
+        <li>数据只保存在这台设备的浏览器里，不会上传。</li>
+        <li>换手机或清浏览器数据前，记得先「导出」备份。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <strong style="font-size:15px">安装到手机桌面</strong>
+      <p class="muted" id="installHint" style="margin:6px 0 10px">
+        装到桌面后就像 App：独立图标、全屏打开、没网也能用。
+      </p>
+      <button class="btn primary" id="btnInstall" style="width:100%">添加到桌面</button>
+    </div>
+  </section>
+</div>
+
+<div class="dock" id="dock">
+  <div class="dock-inner">
+    <button class="btn primary" id="dockBtn">开始背诵</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+ * 1. 数据存储
+ * ============================================================ */
+const STORAGE_KEY = "vocab_app_v1";
+
+const DEMO_WORDS = [
+  { en: "abandon",  zh: "放弃；抛弃",      unit: "Unit 1" },
+  { en: "ability",  zh: "能力；才能",      unit: "Unit 1" },
+  { en: "absorb",   zh: "吸收；吸引",      unit: "Unit 1" },
+  { en: "abstract", zh: "抽象的；摘要",    unit: "Unit 1" },
+  { en: "academic", zh: "学术的",          unit: "Unit 1" },
+  { en: "accept",   zh: "接受；同意",      unit: "Unit 1" },
+  { en: "access",   zh: "接近；进入；通道", unit: "Unit 1" },
+  { en: "accident", zh: "事故；意外",      unit: "Unit 1" },
+
+  { en: "balance",  zh: "平衡",            unit: "Unit 2" },
+  { en: "barrier",  zh: "障碍；屏障",      unit: "Unit 2" },
+  { en: "behave",   zh: "表现；举止",      unit: "Unit 2" },
+  { en: "benefit",  zh: "利益；好处",      unit: "Unit 2" },
+  { en: "brief",    zh: "简短的；摘要",    unit: "Unit 2" },
+  { en: "budget",   zh: "预算",            unit: "Unit 2" },
+  { en: "burden",   zh: "负担",            unit: "Unit 2" },
+  { en: "calculate", zh: "计算",           unit: "Unit 2" },
+
+  { en: "campaign", zh: "运动；战役",      unit: "Unit 3" },
+  { en: "capable",  zh: "有能力的",        unit: "Unit 3" },
+  { en: "capacity", zh: "容量；能力",      unit: "Unit 3" },
+  { en: "career",   zh: "职业；生涯",      unit: "Unit 3" },
+  { en: "challenge", zh: "挑战",           unit: "Unit 3" },
+  { en: "character", zh: "性格；角色",     unit: "Unit 3" },
+  { en: "circumstance", zh: "环境；情况",  unit: "Unit 3" },
+  { en: "combine",  zh: "结合；联合",      unit: "Unit 3" }
+];
+
+function defaultState() {
+  return {
+    version: 1,
+    words: DEMO_WORDS.map(w => ({ ...w })),
+    stats: {},                      // { wordKey: { wrong, right, lastAt } }
+    settings: { units: [], mode: "all" }
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultState();
+    const s = JSON.parse(raw);
+    if (!s || !Array.isArray(s.words)) return defaultState();
+    s.stats = s.stats || {};
+    s.settings = s.settings || { units: [], mode: "all" };
+    return s;
+  } catch (e) {
+    console.warn("读取本地数据失败，使用默认数据", e);
+    return defaultState();
+  }
+}
+
+let state = loadState();
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    toast("保存失败：浏览器存储空间不足或被禁用");
+    console.error(e);
+  }
+}
+
+/* ============================================================
+ * 2. 核心逻辑：答案判定
+ * ============================================================ */
+const NEG_CHARS = ["不", "没", "无", "非", "未", "别"];
+
+/** 归一化：全角转半角、去空白、去标点、转小写 */
+function normalize(text) {
+  if (!text) return "";
+  let s = String(text);
+  // 全角字符转半角
+  s = s.replace(/[\uFF01-\uFF5E]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+       .replace(/\u3000/g, " ");
+  s = s.replace(/\s+/g, "");
+  s = s.replace(/[，。、；：！？,.;:!?'"“”‘’（）()\[\]【】《》<>·…—\-_~`\/\\]/g, "");
+  return s.toLowerCase();
+}
+
+/** 把 "放弃；抛弃" 拆成 ["放弃","抛弃"] */
+function splitMeanings(text) {
+  return String(text || "")
+    .split(/[;；,，、\/|\n]/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+/** shortStr 出现在 longStr 中时，前面是否紧跟否定词 */
+function negatedInside(shortStr, longStr) {
+  const idx = longStr.indexOf(shortStr);
+  if (idx <= 0) return false;
+  return NEG_CHARS.includes(longStr[idx - 1]);
+}
+
+/**
+ * 判断用户输入是否正确。
+ * 返回 { ok, kind, matched }
+ *   kind: "exact" | "partial" | "empty" | "mismatch"
+ */
+function judgeAnswer(input, meaningText) {
+  const u = normalize(input);
+  if (!u) return { ok: false, kind: "empty" };
+
+  const candidates = splitMeanings(meaningText).map(normalize).filter(Boolean);
+  if (!candidates.length) return { ok: false, kind: "mismatch" };
+
+  // 1) 完全相等
+  for (const c of candidates) {
+    if (u === c) return { ok: true, kind: "exact", matched: c };
+  }
+
+  // 2) 包含关系（长度 >= 2，且要排除否定词造成的反义误判）
+  for (const c of candidates) {
+    if (c.length < 2 || u.length < 2) continue;
+
+    if (c.includes(u) && !negatedInside(u, c)) {
+      return { ok: true, kind: "partial", matched: c };
+    }
+    if (u.includes(c) && !negatedInside(c, u)) {
+      return { ok: true, kind: "partial", matched: c };
+    }
+  }
+
+  return { ok: false, kind: "mismatch" };
+}
+
+/* ============================================================
+ * 3. 词表解析与统计
+ * ============================================================ */
+function wordKey(en) {
+  return String(en || "").trim().toLowerCase();
+}
+
+function parseWordList(text) {
+  const out = [];
+  const lines = String(text || "").split(/\r?\n/);
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    let parts = null;
+    if (line.includes("|")) parts = line.split("|");
+    else if (line.includes("\t")) parts = line.split("\t");
+    else if (line.includes("=>")) parts = line.split("=>");
+    else if (line.includes(" - ")) parts = line.split(" - ");
+    if (!parts) continue;
+
+    const en = (parts[0] || "").trim();
+    const zh = (parts[1] || "").trim();
+    const unit = (parts[2] || "").trim() || "未分组";
+    if (!en || !zh) continue;
+
+    out.push({ en, zh, unit });
+  }
+  return out;
+}
+
+function getStat(en) {
+  const k = wordKey(en);
+  return state.stats[k] || { wrong: 0, right: 0, lastAt: 0 };
+}
+
+function bumpStat(en, correct) {
+  const k = wordKey(en);
+  const s = state.stats[k] || { wrong: 0, right: 0, lastAt: 0 };
+  if (correct) s.right += 1;
+  else s.wrong += 1;
+  s.lastAt = Date.now();
+  state.stats[k] = s;
+  saveState();
+}
+
+function allUnits() {
+  return Array.from(new Set(state.words.map(w => w.unit)));
+}
+
+function selectedUnits() {
+  const units = allUnits();
+  const sel = state.settings.units;
+  if (!sel || sel.length === 0) return units;      // 空 = 全选
+  return units.filter(u => sel.includes(u));
+}
+
+function wordsInScope() {
+  const units = new Set(selectedUnits());
+  return state.words.filter(w => units.has(w.unit));
+}
+
+function wordsWrongOnly() {
+  return wordsInScope().filter(w => getStat(w.en).wrong > 0);
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* ============================================================
+ * 4. 界面状态
+ * ============================================================ */
+const $ = id => document.getElementById(id);
+
+let view = "quiz";
+let queue = [];          // 本轮题目
+let cursor = 0;          // 当前题号
+let answered = 0;        // 已作答数
+let correctCount = 0;    // 答对数
+let current = null;      // 当前题目
+let currentAnswered = false;
+
+function toast(msg, ms = 1800) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), ms);
+}
+
+/* ---------------- 视图切换 ---------------- */
+function updateDock() {
+  const dock = $("dock");
+  const inRound = !$("quizCard").classList.contains("hidden");
+  if (inRound) { dock.classList.add("hidden"); return; }
+  dock.classList.remove("hidden");
+
+  const btn = $("dockBtn");
+  if (view === "wrong") btn.textContent = "开始错题强化";
+  else if (view === "lib") btn.textContent = "去背单词";
+  else btn.textContent = state.settings.mode === "wrong" ? "开始错题强化" : "开始背诵";
+}
+
+function switchView(next) {
+  view = next;
+  $("viewQuiz").classList.toggle("hidden", next !== "quiz");
+  $("viewWrong").classList.toggle("hidden", next !== "wrong");
+  $("viewLib").classList.toggle("hidden", next !== "lib");
+
+  $("tabQuiz").classList.toggle("active", next === "quiz");
+  $("tabWrong").classList.toggle("active", next === "wrong");
+  $("tabLib").classList.toggle("active", next === "lib");
+
+  if (next === "wrong") renderWrongBook();
+  if (next === "lib") renderLibrary();
+  if (next === "quiz") renderSetup();
+
+  updateDock();
+}
+
+/* ---------------- 单元选择 ---------------- */
+function renderSetup() {
+  const units = allUnits();
+  const sel = selectedUnits();
+  const box = $("unitChips");
+  box.innerHTML = "";
+
+  if (!units.length) {
+    box.innerHTML = '<div class="muted">词库是空的，请到「词库」页导入单词。</div>';
+  }
+
+  for (const u of units) {
+    const n = state.words.filter(w => w.unit === u).length;
+    const el = document.createElement("div");
+    el.className = "chip" + (sel.includes(u) ? " on" : "");
+    el.innerHTML = `${escapeHtml(u)}<span class="n">·&nbsp;${n}</span>`;
+    el.onclick = () => {
+      const cur = new Set(selectedUnits());
+      if (cur.has(u)) cur.delete(u); else cur.add(u);
+      state.settings.units = Array.from(cur);
+      // 全选时存空数组，方便以后新增单元自动包含
+      if (state.settings.units.length === units.length) state.settings.units = [];
+      saveState();
+      renderSetup();
+    };
+    box.appendChild(el);
+  }
+
+  // 模式
+  document.querySelectorAll("#modeChips .chip").forEach(el => {
+    el.classList.toggle("on", el.dataset.mode === state.settings.mode);
+  });
+
+  const scope = wordsInScope();
+  const wrong = wordsWrongOnly();
+  $("statTotal").textContent = state.settings.mode === "wrong" ? wrong.length : scope.length;
+  $("statDone").textContent = "0";
+  $("statAcc").textContent = "—";
+  $("btnStart").disabled = (state.settings.mode === "wrong" ? wrong.length : scope.length) === 0;
+  $("btnStart").textContent = state.settings.mode === "wrong" ? "开始错题强化" : "开始背诵";
+
+  $("headerSub").textContent = `${state.words.length} 词 · ${units.length} 单元`;
+  updateWrongBadge();
+}
+
+function updateWrongBadge() {
+  const n = state.words.filter(w => getStat(w.en).wrong > 0).length;
+  const b = $("wrongBadge");
+  b.textContent = n;
+  b.classList.toggle("hidden", n === 0);
+}
+
+/* ---------------- 开始一轮 ---------------- */
+function startRound(forcedMode) {
+  const mode = forcedMode || state.settings.mode;
+  let pool = mode === "wrong" ? wordsWrongOnly() : wordsInScope();
+
+  if (!pool.length) {
+    toast(mode === "wrong" ? "当前范围没有错题，先去背几轮吧" : "当前范围没有单词");
+    return;
+  }
+
+  queue = shuffle(pool);
+  cursor = 0;
+  answered = 0;
+  correctCount = 0;
+
+  $("setupCard").classList.add("hidden");
+  $("quizCard").classList.remove("hidden");
+  updateDock();
+  renderQuestion();
+}
+
+function endRound() {
+  $("quizCard").classList.add("hidden");
+  $("setupCard").classList.remove("hidden");
+  queue = []; current = null;
+  renderSetup();
+  updateDock();
+}
+
+function renderQuestion() {
+  if (cursor >= queue.length) {
+    finishRound();
+    return;
+  }
+  current = queue[cursor];
+  currentAnswered = false;
+
+  $("quizWord").textContent = current.en;
+  const stat = getStat(current.en);
+  const wrongTimes = stat.wrong > 0 ? ` · 错 ${stat.wrong} 次` : "";
+  $("quizHint").innerHTML =
+    `<span class="unit-tag">${escapeHtml(current.unit)}</span>${wrongTimes}`;
+
+  const input = $("answerInput");
+  input.value = "";
+  input.disabled = false;
+  input.focus();
+
+  $("feedback").classList.add("hidden");
+  $("nextRow").classList.add("hidden");
+  $("btnSubmit").disabled = false;
+  $("btnSkip").disabled = false;
+
+  $("quizProgress").textContent = `第 ${cursor + 1} / ${queue.length} 题`;
+  $("progressBar").style.width = `${(cursor / queue.length) * 100}%`;
+  $("statDone").textContent = answered;
+}
+
+function submitAnswer(skip) {
+  if (!current || currentAnswered) return;
+
+  const input = $("answerInput");
+  const value = skip ? "" : input.value.trim();
+
+  if (!skip && !value) { input.focus(); return; }
+
+  const res = skip ? { ok: false, kind: "skip" } : judgeAnswer(value, current.zh);
+  currentAnswered = true;
+  answered += 1;
+  if (res.ok) correctCount += 1;
+
+  bumpStat(current.en, res.ok);
+
+  // 反馈
+  const fb = $("feedback");
+  fb.className = "feedback " + (res.ok ? "ok" : "bad");
+  fb.classList.remove("hidden");
+
+  if (res.ok) {
+    fb.innerHTML = res.kind === "exact"
+      ? "✅ 正确！"
+      : `✅ 正确！<span class="answer">完整释义：<b>${escapeHtml(current.zh)}</b></span>`;
+  } else {
+    fb.innerHTML = (skip ? "跳过。" : "❌ 不正确。")
+      + `<span class="answer">正确答案：<b>${escapeHtml(current.zh)}</b></span>`;
+  }
+
+  input.disabled = true;
+  $("btnSubmit").disabled = true;
+  $("btnSkip").disabled = true;
+  $("nextRow").classList.remove("hidden");
+  $("btnMarkRight").classList.toggle("hidden", res.ok);
+
+  $("statDone").textContent = answered;
+  $("statAcc").textContent = answered
+    ? Math.round((correctCount / answered) * 100) + "%" : "—";
+}
+
+function nextQuestion() {
+  cursor += 1;
+  renderQuestion();
+}
+
+function finishRound() {
+  const acc = answered ? Math.round((correctCount / answered) * 100) : 0;
+  $("quizCard").classList.add("hidden");
+  $("setupCard").classList.remove("hidden");
+
+  const el = $("statAcc");
+  el.textContent = acc + "%";
+  toast(`本轮完成：${answered} 题，正确 ${correctCount} 题（${acc}%）`, 2600);
+  renderSetup();
+  updateDock();
+  updateWrongBadge();
+}
+
+/* ---------------- 错题本 ---------------- */
+function renderWrongBook() {
+  const list = $("wrongList");
+  const summary = $("wrongSummary");
+
+  const items = state.words
+    .map(w => ({ ...w, stat: getStat(w.en) }))
+    .filter(w => w.stat.wrong > 0)
+    .sort((a, b) => b.stat.wrong - a.stat.wrong || b.stat.lastAt - a.stat.lastAt);
+
+  if (!items.length) {
+    summary.textContent = "还没有错题。答错的词会自动出现在这里。";
+    list.innerHTML = '<div class="empty"><span class="big">🎉</span>暂时没有错题</div>';
+    updateWrongBadge();
+    return;
+  }
+
+  const totalWrong = items.reduce((s, w) => s + w.stat.wrong, 0);
+  summary.textContent = `共 ${items.length} 个词出过错，累计错误 ${totalWrong} 次`;
+
+  list.innerHTML = items.map(w => `
+    <div class="wrong-item" data-en="${escapeAttr(w.en)}">
+      <div class="wrong-main">
+        <div class="wrong-en">${escapeHtml(w.en)}</div>
+        <div class="wrong-zh">${escapeHtml(w.zh)} · ${escapeHtml(w.unit)}</div>
+      </div>
+      <div class="wrong-count">
+        <div class="n">${w.stat.wrong}</div>
+        <div class="t">错次</div>
+      </div>
+      <button class="btn small ghost" data-act="clear">清除</button>
+    </div>
+  `).join("");
+
+  list.querySelectorAll('[data-act="clear"]').forEach(btn => {
+    btn.onclick = (e) => {
+      const en = e.target.closest(".wrong-item").dataset.en;
+      const k = wordKey(en);
+      if (state.stats[k]) { state.stats[k].wrong = 0; saveState(); }
+      renderWrongBook();
+      toast("已清除该词的错误记录");
+    };
+  });
+
+  updateWrongBadge();
+}
+
+/* ---------------- 词库 ---------------- */
+function renderLibrary() {
+  const units = allUnits();
+  const total = state.words.length;
+  const withWrong = state.words.filter(w => getStat(w.en).wrong > 0).length;
+  $("libSummary").innerHTML =
+    `共 <b>${total}</b> 个单词 · ${units.length} 个单元 · 有错题 <b>${withWrong}</b> 个<br>` +
+    units.map(u => {
+      const n = state.words.filter(w => w.unit === u).length;
+      return `${escapeHtml(u)}（${n}）`;
+    }).join("、");
+}
+
+/* ============================================================
+ * 5. 事件绑定
+ * ============================================================ */
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+// 标签切换
+$("tabQuiz").onclick = () => switchView("quiz");
+$("tabWrong").onclick = () => switchView("wrong");
+$("tabLib").onclick = () => switchView("lib");
+
+// 单元全选/清空
+$("btnSelectAll").onclick = () => {
+  state.settings.units = [];
+  saveState(); renderSetup();
+  toast("已全选所有单元");
+};
+$("btnSelectNone").onclick = () => {
+  state.settings.units = ["__none__"];
+  saveState(); renderSetup();
+  toast("已清空，请至少选一个单元");
+};
+
+// 模式切换
+document.querySelectorAll("#modeChips .chip").forEach(el => {
+  el.onclick = () => {
+    state.settings.mode = el.dataset.mode;
+    saveState(); renderSetup();
+  };
+});
+
+// 开始
+$("btnStart").onclick = () => startRound();
+$("dockBtn").onclick = () => {
+  if (view === "wrong") {
+    state.settings.mode = "wrong";
+    saveState();
+    switchView("quiz");
+    renderSetup();
+    if (wordsWrongOnly().length) startRound("wrong");
+    else toast("还没有错题可练");
+    return;
+  }
+  if (view !== "quiz") switchView("quiz");
+  else startRound();
+};
+
+// 答题
+$("btnSubmit").onclick = () => submitAnswer(false);
+$("btnSkip").onclick = () => submitAnswer(true);
+$("btnNext").onclick = () => nextQuestion();
+$("btnQuit").onclick = () => endRound();
+
+$("answerInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    if (currentAnswered) nextQuestion();
+    else submitAnswer(false);
+  }
+});
+
+// 「其实我会」：撤销这次错误
+$("btnMarkRight").onclick = () => {
+  if (!current) return;
+  const k = wordKey(current.en);
+  const s = state.stats[k];
+  if (s && s.wrong > 0) {
+    s.wrong -= 1;
+    s.right = (s.right || 0) + 1;
+    saveState();
+  }
+  toast("已把这次记为正确");
+  nextQuestion();
+};
+
+// 错题本 -> 只练错题
+$("btnPracticeWrong").onclick = () => {
+  state.settings.mode = "wrong";
+  saveState();
+  switchView("quiz");
+  renderSetup();
+  if (wordsWrongOnly().length) startRound("wrong");
+  else toast("还没有错题可练");
+};
+
+// 导入
+$("btnImport").onclick = () => {
+  const text = $("importText").value;
+  const words = parseWordList(text);
+  if (!words.length) {
+    toast("没有解析到有效单词，请检查格式");
+    return;
+  }
+  importWords(words);
+};
+
+$("btnPickFile").onclick = () => $("importFile").click();
+$("importFile").onchange = (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    $("importText").value = reader.result;
+    toast("文件已读取，点「导入」生效");
+  };
+  reader.readAsText(file, "utf-8");
+};
+
+function importWords(newWords) {
+  const map = new Map();
+  for (const w of state.words) map.set(wordKey(w.en), w);
+  for (const w of newWords) map.set(wordKey(w.en), w);
+  state.words = Array.from(map.values());
+  state.settings.units = [];   // 新增单元后默认全选
+  saveState();
+  renderLibrary();
+  renderSetup();
+  toast(`导入成功，共 ${newWords.length} 条，词库现有 ${state.words.length} 词`);
+}
+
+// 导出
+$("btnExport").onclick = () => {
+  const lines = state.words.map(w => `${w.en} | ${w.zh} | ${w.unit}`);
+  const content = lines.join("\n");
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `wordlist_${new Date().toISOString().slice(0, 10)}.txt`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  toast("已导出为 txt 文件");
+};
+
+// 清零错误
+$("btnResetStats").onclick = () => {
+  if (!confirm("确定要把所有单词的错误次数清零吗？此操作不可撤销。")) return;
+  state.stats = {};
+  saveState();
+  renderWrongBook();
+  renderLibrary();
+  renderSetup();
+  toast("错误次数已清零");
+};
+
+// 恢复示例
+$("btnRestoreDemo").onclick = () => {
+  if (!confirm("恢复示例词库会覆盖当前词库，确定吗？")) return;
+  state = defaultState();
+  saveState();
+  renderSetup(); renderLibrary(); renderWrongBook();
+  toast("已恢复示例词库");
+};
+
+/* ============================================================
+ * 6. 安装到桌面（PWA）与离线缓存
+ * ============================================================ */
+let deferredInstallPrompt = null;
+
+function isStandalone() {
+  return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches)
+      || window.navigator.standalone === true;
+}
+
+const installHint = $("installHint");
+const btnInstall = $("btnInstall");
+
+function refreshInstallUI() {
+  if (isStandalone()) {
+    btnInstall.textContent = "已在桌面运行 ✓";
+    btnInstall.disabled = true;
+    installHint.textContent = "你正在以 App 模式使用，关掉这个页面也能从桌面图标打开。";
+    return;
+  }
+  if (location.protocol === "file:") {
+    btnInstall.textContent = "需要网址访问";
+    btnInstall.disabled = true;
+    installHint.textContent =
+      "当前是本地文件模式，无法安装。请按 README 的方法用网址打开后再安装。";
+    return;
+  }
+  if (!deferredInstallPrompt) {
+    btnInstall.textContent = "添加到桌面";
+    btnInstall.disabled = false;
+    installHint.textContent =
+      "装到桌面后就像 App：独立图标、全屏打开、没网也能用。（若点按钮没反应，用浏览器菜单里的「添加到主屏幕」）";
+  }
+}
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  btnInstall.disabled = false;
+  btnInstall.textContent = "添加到桌面";
+  installHint.textContent = "点一下就能装到桌面，之后没网也能用。";
+});
+
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  btnInstall.textContent = "已安装 ✓";
+  btnInstall.disabled = true;
+  installHint.textContent = "已安装到桌面，以后直接点图标打开。";
+  toast("已安装到桌面");
+});
+
+btnInstall.onclick = async () => {
+  if (isStandalone()) return;
+  if (location.protocol === "file:") {
+    toast("本地文件模式不能安装，请改用网址访问", 3200);
+    return;
+  }
+  if (!deferredInstallPrompt) {
+    toast("请用浏览器菜单里的「添加到主屏幕 / 安装应用」", 3200);
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  try {
+    const choice = await deferredInstallPrompt.userChoice;
+    if (choice && choice.outcome === "accepted") toast("正在安装…");
+  } catch (e) {
+    console.warn(e);
+  }
+  deferredInstallPrompt = null;
+};
+
+// 注册 Service Worker：只有通过 http(s) 访问才有效（file:// 不支持）
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      console.log("离线缓存已启用", reg.scope);
+    }).catch((err) => {
+      console.warn("Service Worker 注册失败，离线功能不可用", err);
+    });
+  });
+}
+
+/* ============================================================
+ * 7. 启动
+ * ============================================================ */
+refreshInstallUI();
+
+switchView("quiz");
+renderSetup();
+</script>
+</body>
+</html>
