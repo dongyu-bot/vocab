@@ -7,7 +7,7 @@
  * 用户下次打开时会自动更新缓存。
  */
 
-const VERSION = "vocab-v1";
+const VERSION = "vocab-v2";
 const ASSETS = [
   "./",
   "./index.html",
